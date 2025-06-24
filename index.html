@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mine Together - Discord Activity</title>
+  <script src="https://unpkg.com/@discord/embedded-app-sdk@latest"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    button { padding: 12px 24px; font-size: 16px; margin: 10px; cursor: pointer; }
+    #stats { font-size: 20px; margin: 15px 0; }
+    #user-info { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div id="user-info">Cargando usuario...</div>
+  <div id="stats">
+    <div>Recursos: <span id="score">0</span></div>
+    <div>Miners: <span id="autoMiners">0</span></div>
+    <div>Coste: <span id="autoMinerCost">10</span></div>
+  </div>
+  <button id="mineButton">🔨 MINAR</button>
+  <button id="buyButton">🤖 COMPRAR MINERO</button>
+
+  <script>
+    // 1. Configuración del SDK de Discord
+    const discordSdk = new DiscordSDK('1034818825356587099'); // Reemplaza con tu Client ID
+    let auth;
+
+    // 2. Autenticación con Discord
+    async function setupDiscord() {
+      await discordSdk.ready();
+      
+      // Autenticación con el token del bot
+      const { code } = await discordSdk.commands.authorize({
+        client_id: '1034818825356587099',
+        response_type: 'code',
+        state: '',
+        prompt: 'none',
+        scope: ['identify', 'rpc.activities.write'],
+      });
+
+      // Usa tu token de bot aquí (obtenido del Developer Portal)
+      const BOT_TOKEN = '8f0e0a207a487bc34b7d278f34891ed297cebdb50dc7da7d39b0debbdd13e35a'; // Reemplaza con tu token real
+      
+      auth = await discordSdk.commands.authenticate({
+        access_token: BOT_TOKEN
+      });
+
+      // Mostrar información del usuario
+      document.getElementById('user-info').innerHTML = `
+        <img src="https://cdn.discordapp.com/avatars/${auth.user.id}/${auth.user.avatar}.png" width="50" style="border-radius:50%">
+        <h3>Jugando como: ${auth.user.username}</h3>
+      `;
+    }
+
+    // 3. Lógica del juego
+    class MineTogether {
+      constructor() {
+        this.score = 0;
+        this.clickValue = 1;
+        this.autoMinerCost = 10;
+        this.autoMiners = 0;
+        this.autoMinerInterval = 1000;
+
+        setInterval(() => {
+          this.score += this.autoMiners;
+          this.updateUI();
+        }, this.autoMinerInterval);
+      }
+
+      mine() {
+        this.score += this.clickValue;
+        this.updateUI();
+      }
+
+      buyAutoMiner() {
+        if (this.score >= this.autoMinerCost) {
+          this.score -= this.autoMinerCost;
+          this.autoMiners++;
+          this.autoMinerCost = Math.floor(this.autoMinerCost * 1.5);
+          this.updateUI();
+        }
+      }
+
+      updateUI() {
+        document.getElementById('score').textContent = this.score;
+        document.getElementById('autoMiners').textContent = this.autoMiners;
+        document.getElementById('autoMinerCost').textContent = this.autoMinerCost;
+      }
+    }
+
+    // 4. Inicialización
+    let game;
+    setupDiscord().then(() => {
+      game = new MineTogether();
+      
+      document.getElementById('mineButton').addEventListener('click', () => game.mine());
+      document.getElementById('buyButton').addEventListener('click', () => game.buyAutoMiner());
+      
+      // Actualizar UI inicial
+      game.updateUI();
+    });
+
+
+
+        // Ejemplo de función para sincronización
+    async function syncGameState() {
+    const channelId = discordSdk.channelId;
+    
+    // Obtener estado actual del servidor
+    const response = await fetch(`https://tubackend.com/state?channel=${channelId}`);
+    const gameState = await response.json();
+    
+    // Actualizar juego local
+    game.score = gameState.score;
+    game.autoMiners = gameState.autoMiners;
+    game.updateUI();
+    }
+
+    // Llamar cada 5 segundos
+    setInterval(syncGameState, 5000);
+
+  </script>
+</body>
+</html>
